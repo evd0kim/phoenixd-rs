@@ -10,23 +10,23 @@ repository = "https://github.com/thesimplekid/phoenixd-rs"
 rust-version = "1.75.0" # MSRV
 
 [dependencies]
-anyhow = "1"
-axum = "0.8.1"
-reqwest = { version = "0.12", default-features = false, features =  ["json",
-    "rustls-tls",
-    "rustls-tls-native-roots",
-    "socks"]}
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
-tokio = { version = "1", default-features = false }
-thiserror = "1"
-log = "0.4"
-async-trait = "0.1"
+anyhow = "1.0.102"
+axum = "0.8.9"
+reqwest = { version = "0.13.3", default-features = false, features =  ["json",
+    "rustls",
+    "socks",
+    "form"]}
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.52.3", default-features = false }
+thiserror = "2.0.18"
+log = "0.4.29"
+async-trait = "0.1.89"
 
 [dev-dependencies]
-tokio = { version = "1", features =["rt-multi-thread", "macros", "sync", "time"] }
-uuid = { version = "1", features = ["v4"] }
-dotenvy = "0.15"
+tokio = { version = "1.52.3", features =["rt-multi-thread", "macros", "sync", "time"] }
+uuid = { version = "1.23.1", features = ["v4"] }
+dotenvy = "0.15.7"
 
 [[example]]
 name = "create_invoice"

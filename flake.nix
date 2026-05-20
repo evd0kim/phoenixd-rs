@@ -1,25 +1,43 @@
 {
-  description = "A very basic flake";
+  description = "Rust Development Shell";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.05";
-
-    flakebox = {
-      url = "github:rustshop/flakebox";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    flake-utils.url = "github:numtide/flake-utils";
+    nixpkgs.url      = "github:NixOS/nixpkgs/nixos-unstable";
+    rust-overlay.url = "github:oxalica/rust-overlay";
+    flake-utils.url  = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, flakebox, flake-utils }:
+  outputs = { self, nixpkgs, rust-overlay, flake-utils, ... }:
     flake-utils.lib.eachDefaultSystem (system:
       let
-        flakeboxLib = flakebox.lib.${system} { };
-      in
-      {
-        devShells = flakeboxLib.mkShells {
-          packages = [ ];
+        overlays = [ (import rust-overlay) ];
+        pkgs = import nixpkgs {
+          inherit system overlays;
         };
-      });
+      in
+      with pkgs;
+      {
+        devShells.default = mkShell {
+          buildInputs = [
+            openssl
+            llvmPackages_latest.clang
+            llvmPackages_latest.bintools
+            gcc13
+            parallel
+            pkg-config
+            (
+              rust-bin.fromRustupToolchainFile ./rust-toolchain.toml
+            )
+            # --- New dependencies for the pre-commit hook ---
+            shellcheck
+            typos
+            semgrep
+	    convco
+          ];
+
+          RUST_SRC_PATH = pkgs.rustPlatform.rustLibSrc;
+          LIBCLANG_PATH = pkgs.lib.makeLibraryPath [ pkgs.llvmPackages_latest.libclang.lib ];
+        };
+      }
+    );
 }

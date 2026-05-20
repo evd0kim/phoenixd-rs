@@ -4,6 +4,7 @@ use anyhow::bail;
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
+use crate::validation::LnValidation;
 use crate::{Error, Phoenixd};
 
 /// Pay Invoice Request
@@ -17,6 +18,27 @@ pub struct PayInvoiceRequest {
     pub invoice: String,
 }
 
+impl PayInvoiceRequest {
+    /// Create a new validated pay invoice request
+    pub fn new(invoice: String, amount_sat: Option<u64>) -> anyhow::Result<Self> {
+        // Validate inputs
+        LnValidation::validate_bolt11_invoice(&invoice)?;
+        LnValidation::validate_optional_amount_sat(amount_sat)?;
+
+        Ok(Self {
+            amount_sat,
+            invoice,
+        })
+    }
+
+    /// Validate the pay invoice request
+    pub fn validate(&self) -> anyhow::Result<()> {
+        LnValidation::validate_bolt11_invoice(&self.invoice)?;
+        LnValidation::validate_optional_amount_sat(self.amount_sat)?;
+        Ok(())
+    }
+}
+
 ///Pay bolt12 offer
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -28,6 +50,30 @@ pub struct PayBolt12Request {
     /// Message
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+}
+
+impl PayBolt12Request {
+    /// Create a new validated BOLT-12 pay request
+    pub fn new(offer: String, amount_sat: u64, message: Option<String>) -> anyhow::Result<Self> {
+        // Validate inputs
+        LnValidation::validate_bolt12_offer(&offer)?;
+        LnValidation::validate_amount_sat(amount_sat)?;
+        LnValidation::validate_message(&message)?;
+
+        Ok(Self {
+            amount_sat,
+            offer,
+            message,
+        })
+    }
+
+    /// Validate the BOLT-12 pay request
+    pub fn validate(&self) -> anyhow::Result<()> {
+        LnValidation::validate_bolt12_offer(&self.offer)?;
+        LnValidation::validate_amount_sat(self.amount_sat)?;
+        LnValidation::validate_message(&self.message)?;
+        Ok(())
+    }
 }
 
 /// Pay Invoice Response
@@ -69,12 +115,16 @@ pub struct GetOutgoingInvoiceResponse {
 }
 
 impl Phoenixd {
-    /// PayInvoice
+    /// Pay BOLT-11 Invoice with validation
     pub async fn pay_bolt11_invoice(
         &self,
         invoice: &str,
         amount_sat: Option<u64>,
     ) -> anyhow::Result<PayInvoiceResponse> {
+        // Validate inputs before sending to API
+        LnValidation::validate_bolt11_invoice(invoice)?;
+        LnValidation::validate_optional_amount_sat(amount_sat)?;
+
         let url = self.api_url.join("/payinvoice")?;
 
         let request = PayInvoiceRequest {
@@ -94,13 +144,18 @@ impl Phoenixd {
         }
     }
 
-    /// Pay offer
+    /// Pay BOLT-12 offer with validation
     pub async fn pay_bolt12_offer(
         &self,
         offer: String,
         amount_sat: u64,
         message: Option<String>,
     ) -> anyhow::Result<PayInvoiceResponse> {
+        // Validate inputs before sending to API
+        LnValidation::validate_bolt12_offer(&offer)?;
+        LnValidation::validate_amount_sat(amount_sat)?;
+        LnValidation::validate_message(&message)?;
+
         let url = self.api_url.join("/payoffer")?;
 
         let request = PayBolt12Request {
@@ -121,11 +176,15 @@ impl Phoenixd {
         }
     }
 
-    /// Find outgoing invoice
+    /// Find outgoing invoice with payment hash validation
     pub async fn get_outgoing_invoice(
         &self,
         payment_hash: &str,
     ) -> Result<GetOutgoingInvoiceResponse, Error> {
+        // Validate payment hash format
+        LnValidation::validate_payment_hash(payment_hash)
+            .map_err(|e| Error::InvalidInput(e.to_string()))?;
+
         let url = self
             .api_url
             .join(&format!("payments/outgoing/{}", payment_hash))

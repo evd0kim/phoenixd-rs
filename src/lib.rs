@@ -13,11 +13,13 @@ use serde_json::Value;
 mod error;
 pub mod invoice;
 pub mod pay_ln;
+pub mod validation;
 pub mod webhooks;
 
 pub use error::Error;
 pub use invoice::*;
 pub use pay_ln::*;
+pub use validation::LnValidation;
 
 /// Phoenixd
 #[derive(Debug, Clone)]

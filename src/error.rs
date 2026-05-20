@@ -11,6 +11,9 @@ pub enum Error {
     /// Invalid Url
     #[error("Invalid Url")]
     InvalidUrl,
+    /// Invalid Input
+    #[error("Invalid input: {0}")]
+    InvalidInput(String),
     /// From reqwest error
     #[error(transparent)]
     ReqwestError(#[from] reqwest::Error),

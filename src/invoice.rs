@@ -36,10 +36,10 @@ impl InvoiceRequest {
         webhook_url: Option<String>,
     ) -> Result<Self> {
         // Validate all inputs
-        LnValidation::validate_amount_sat(amount_sat)?;
-        LnValidation::validate_external_id(&external_id)?;
-        LnValidation::validate_description(&description)?;
-        LnValidation::validate_webhook_url(&webhook_url)?;
+        LnValidation::check_amount_sat(amount_sat)?;
+        LnValidation::check_external_id(&external_id)?;
+        LnValidation::check_description(&description)?;
+        LnValidation::check_webhook_url(&webhook_url)?;
 
         // Validate description hash if provided (should be hex)
         if let Some(ref hash) = description_hash {
@@ -59,10 +59,10 @@ impl InvoiceRequest {
 
     /// Validate the invoice request
     pub fn validate(&self) -> Result<()> {
-        LnValidation::validate_amount_sat(self.amount_sat)?;
-        LnValidation::validate_external_id(&self.external_id)?;
-        LnValidation::validate_description(&self.description)?;
-        LnValidation::validate_webhook_url(&self.webhook_url)?;
+        LnValidation::check_amount_sat(self.amount_sat)?;
+        LnValidation::check_external_id(&self.external_id)?;
+        LnValidation::check_description(&self.description)?;
+        LnValidation::check_webhook_url(&self.webhook_url)?;
 
         // Validate description hash if provided
         if let Some(ref hash) = self.description_hash {
@@ -141,7 +141,7 @@ impl Phoenixd {
         payment_hash: &str,
     ) -> Result<GetIncomingInvoiceResponse> {
         // Validate payment hash format
-        LnValidation::validate_payment_hash(payment_hash)?;
+        LnValidation::check_payment_hash(payment_hash)?;
 
         let url = self
             .api_url

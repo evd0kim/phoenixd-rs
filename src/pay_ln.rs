@@ -22,8 +22,8 @@ impl PayInvoiceRequest {
     /// Create a new validated pay invoice request
     pub fn new(invoice: String, amount_sat: Option<u64>) -> anyhow::Result<Self> {
         // Validate inputs
-        LnValidation::validate_bolt11_invoice(&invoice)?;
-        LnValidation::validate_optional_amount_sat(amount_sat)?;
+        LnValidation::check_bolt11_invoice(&invoice)?;
+        LnValidation::check_optional_amount_sat(amount_sat)?;
 
         Ok(Self {
             amount_sat,
@@ -33,8 +33,8 @@ impl PayInvoiceRequest {
 
     /// Validate the pay invoice request
     pub fn validate(&self) -> anyhow::Result<()> {
-        LnValidation::validate_bolt11_invoice(&self.invoice)?;
-        LnValidation::validate_optional_amount_sat(self.amount_sat)?;
+        LnValidation::check_bolt11_invoice(&self.invoice)?;
+        LnValidation::check_optional_amount_sat(self.amount_sat)?;
         Ok(())
     }
 }
@@ -56,9 +56,9 @@ impl PayBolt12Request {
     /// Create a new validated BOLT-12 pay request
     pub fn new(offer: String, amount_sat: u64, message: Option<String>) -> anyhow::Result<Self> {
         // Validate inputs
-        LnValidation::validate_bolt12_offer(&offer)?;
-        LnValidation::validate_amount_sat(amount_sat)?;
-        LnValidation::validate_message(&message)?;
+        LnValidation::check_bolt12_offer(&offer)?;
+        LnValidation::check_amount_sat(amount_sat)?;
+        LnValidation::check_message(&message)?;
 
         Ok(Self {
             amount_sat,
@@ -69,9 +69,9 @@ impl PayBolt12Request {
 
     /// Validate the BOLT-12 pay request
     pub fn validate(&self) -> anyhow::Result<()> {
-        LnValidation::validate_bolt12_offer(&self.offer)?;
-        LnValidation::validate_amount_sat(self.amount_sat)?;
-        LnValidation::validate_message(&self.message)?;
+        LnValidation::check_bolt12_offer(&self.offer)?;
+        LnValidation::check_amount_sat(self.amount_sat)?;
+        LnValidation::check_message(&self.message)?;
         Ok(())
     }
 }
@@ -122,8 +122,8 @@ impl Phoenixd {
         amount_sat: Option<u64>,
     ) -> anyhow::Result<PayInvoiceResponse> {
         // Validate inputs before sending to API
-        LnValidation::validate_bolt11_invoice(invoice)?;
-        LnValidation::validate_optional_amount_sat(amount_sat)?;
+        LnValidation::check_bolt11_invoice(invoice)?;
+        LnValidation::check_optional_amount_sat(amount_sat)?;
 
         let url = self.api_url.join("/payinvoice")?;
 
@@ -152,9 +152,9 @@ impl Phoenixd {
         message: Option<String>,
     ) -> anyhow::Result<PayInvoiceResponse> {
         // Validate inputs before sending to API
-        LnValidation::validate_bolt12_offer(&offer)?;
-        LnValidation::validate_amount_sat(amount_sat)?;
-        LnValidation::validate_message(&message)?;
+        LnValidation::check_bolt12_offer(&offer)?;
+        LnValidation::check_amount_sat(amount_sat)?;
+        LnValidation::check_message(&message)?;
 
         let url = self.api_url.join("/payoffer")?;
 
@@ -182,7 +182,7 @@ impl Phoenixd {
         payment_hash: &str,
     ) -> Result<GetOutgoingInvoiceResponse, Error> {
         // Validate payment hash format
-        LnValidation::validate_payment_hash(payment_hash)
+        LnValidation::check_payment_hash(payment_hash)
             .map_err(|e| Error::InvalidInput(e.to_string()))?;
 
         let url = self

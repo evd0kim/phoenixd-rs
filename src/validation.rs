@@ -27,7 +27,7 @@ impl LnValidation {
     pub const PAYMENT_HASH_HEX_LENGTH: usize = 64;
 
     /// Validate amount in satoshis
-    pub fn validate_amount_sat(amount: u64) -> Result<()> {
+    pub fn check_amount_sat(amount: u64) -> Result<()> {
         if amount == 0 {
             bail!("Amount cannot be zero");
         }
@@ -41,15 +41,15 @@ impl LnValidation {
     }
 
     /// Validate optional amount in satoshis
-    pub fn validate_optional_amount_sat(amount: Option<u64>) -> Result<()> {
+    pub fn check_optional_amount_sat(amount: Option<u64>) -> Result<()> {
         if let Some(amt) = amount {
-            Self::validate_amount_sat(amt)?;
+            Self::check_amount_sat(amt)?;
         }
         Ok(())
     }
 
     /// Validate description string
-    pub fn validate_description(description: &Option<String>) -> Result<()> {
+    pub fn check_description(description: &Option<String>) -> Result<()> {
         if let Some(desc) = description {
             if desc.len() > Self::MAX_DESCRIPTION_LENGTH {
                 bail!(
@@ -66,7 +66,7 @@ impl LnValidation {
     }
 
     /// Validate external ID string
-    pub fn validate_external_id(external_id: &Option<String>) -> Result<()> {
+    pub fn check_external_id(external_id: &Option<String>) -> Result<()> {
         if let Some(id) = external_id {
             if id.is_empty() {
                 bail!("External ID cannot be empty");
@@ -86,7 +86,7 @@ impl LnValidation {
     }
 
     /// Validate message string for BOLT-12
-    pub fn validate_message(message: &Option<String>) -> Result<()> {
+    pub fn check_message(message: &Option<String>) -> Result<()> {
         if let Some(msg) = message {
             if msg.len() > Self::MAX_MESSAGE_LENGTH {
                 bail!(
@@ -103,7 +103,7 @@ impl LnValidation {
     }
 
     /// Validate BOLT-11 invoice format
-    pub fn validate_bolt11_invoice(invoice: &str) -> Result<()> {
+    pub fn check_bolt11_invoice(invoice: &str) -> Result<()> {
         if invoice.is_empty() {
             bail!("Invoice cannot be empty");
         }
@@ -133,7 +133,7 @@ impl LnValidation {
     }
 
     /// Validate BOLT-12 offer format
-    pub fn validate_bolt12_offer(offer: &str) -> Result<()> {
+    pub fn check_bolt12_offer(offer: &str) -> Result<()> {
         if offer.is_empty() {
             bail!("Offer cannot be empty");
         }
@@ -157,7 +157,7 @@ impl LnValidation {
     }
 
     /// Validate payment hash format (64-character hex string)
-    pub fn validate_payment_hash(payment_hash: &str) -> Result<()> {
+    pub fn check_payment_hash(payment_hash: &str) -> Result<()> {
         if payment_hash.is_empty() {
             bail!("Payment hash cannot be empty");
         }
@@ -178,7 +178,7 @@ impl LnValidation {
     }
 
     /// Validate webhook URL format
-    pub fn validate_webhook_url(webhook_url: &Option<String>) -> Result<()> {
+    pub fn check_webhook_url(webhook_url: &Option<String>) -> Result<()> {
         if let Some(url) = webhook_url {
             if url.is_empty() {
                 bail!("Webhook URL cannot be empty");
@@ -208,110 +208,110 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_validate_amount_sat() {
+    fn test_check_amount_sat() {
         // Valid amounts
-        assert!(LnValidation::validate_amount_sat(1).is_ok());
-        assert!(LnValidation::validate_amount_sat(100).is_ok());
-        assert!(LnValidation::validate_amount_sat(1_000_000).is_ok());
-        assert!(LnValidation::validate_amount_sat(21_000_000_000_000_000).is_ok());
+        assert!(LnValidation::check_amount_sat(1).is_ok());
+        assert!(LnValidation::check_amount_sat(100).is_ok());
+        assert!(LnValidation::check_amount_sat(1_000_000).is_ok());
+        assert!(LnValidation::check_amount_sat(21_000_000_000_000_000).is_ok());
 
         // Invalid amounts
-        assert!(LnValidation::validate_amount_sat(0).is_err());
-        assert!(LnValidation::validate_amount_sat(21_000_000_000_000_001).is_err());
+        assert!(LnValidation::check_amount_sat(0).is_err());
+        assert!(LnValidation::check_amount_sat(21_000_000_000_000_001).is_err());
     }
 
     #[test]
-    fn test_validate_optional_amount_sat() {
-        assert!(LnValidation::validate_optional_amount_sat(None).is_ok());
-        assert!(LnValidation::validate_optional_amount_sat(Some(100)).is_ok());
-        assert!(LnValidation::validate_optional_amount_sat(Some(0)).is_err());
+    fn test_check_optional_amount_sat() {
+        assert!(LnValidation::check_optional_amount_sat(None).is_ok());
+        assert!(LnValidation::check_optional_amount_sat(Some(100)).is_ok());
+        assert!(LnValidation::check_optional_amount_sat(Some(0)).is_err());
     }
 
     #[test]
-    fn test_validate_description() {
+    fn test_check_description() {
         // Valid descriptions
-        assert!(LnValidation::validate_description(&None).is_ok());
-        assert!(LnValidation::validate_description(&Some("Valid description".to_string())).is_ok());
+        assert!(LnValidation::check_description(&None).is_ok());
+        assert!(LnValidation::check_description(&Some("Valid description".to_string())).is_ok());
 
         // Invalid descriptions
         let long_description = "a".repeat(640);
-        assert!(LnValidation::validate_description(&Some(long_description)).is_err());
+        assert!(LnValidation::check_description(&Some(long_description)).is_err());
         assert!(
-            LnValidation::validate_description(&Some("Invalid\0description".to_string())).is_err()
+            LnValidation::check_description(&Some("Invalid\0description".to_string())).is_err()
         );
     }
 
     #[test]
-    fn test_validate_external_id() {
+    fn test_check_external_id() {
         // Valid external IDs
-        assert!(LnValidation::validate_external_id(&None).is_ok());
-        assert!(LnValidation::validate_external_id(&Some("valid-id".to_string())).is_ok());
+        assert!(LnValidation::check_external_id(&None).is_ok());
+        assert!(LnValidation::check_external_id(&Some("valid-id".to_string())).is_ok());
 
         // Invalid external IDs
-        assert!(LnValidation::validate_external_id(&Some("".to_string())).is_err());
+        assert!(LnValidation::check_external_id(&Some("".to_string())).is_err());
         let long_id = "a".repeat(256);
-        assert!(LnValidation::validate_external_id(&Some(long_id)).is_err());
-        assert!(LnValidation::validate_external_id(&Some("invalid\0id".to_string())).is_err());
+        assert!(LnValidation::check_external_id(&Some(long_id)).is_err());
+        assert!(LnValidation::check_external_id(&Some("invalid\0id".to_string())).is_err());
     }
 
     #[test]
-    fn test_validate_bolt11_invoice() {
+    fn test_check_bolt11_invoice() {
         // Valid BOLT-11 invoices (simplified format)
         let valid_invoice = "lnbc1u1p0xyzabcdefghijklmnopqrstuvwxyz0123456789".to_string();
-        assert!(LnValidation::validate_bolt11_invoice(&valid_invoice).is_ok());
+        assert!(LnValidation::check_bolt11_invoice(&valid_invoice).is_ok());
 
         // Invalid invoices
-        assert!(LnValidation::validate_bolt11_invoice("").is_err());
-        assert!(LnValidation::validate_bolt11_invoice("bc1qxyz").is_err()); // Not BOLT-11
-        assert!(LnValidation::validate_bolt11_invoice("ln").is_err()); // Too short
+        assert!(LnValidation::check_bolt11_invoice("").is_err());
+        assert!(LnValidation::check_bolt11_invoice("bc1qxyz").is_err()); // Not BOLT-11
+        assert!(LnValidation::check_bolt11_invoice("ln").is_err()); // Too short
     }
 
     #[test]
-    fn test_validate_bolt12_offer() {
+    fn test_check_bolt12_offer() {
         // Valid BOLT-12 offers (simplified format)
         let valid_offer = "lnoxyz1234567890abcdefghijklmnopqrstuvwxyzABCDEF".to_string();
-        assert!(LnValidation::validate_bolt12_offer(&valid_offer).is_ok());
+        assert!(LnValidation::check_bolt12_offer(&valid_offer).is_ok());
 
         // Invalid offers
-        assert!(LnValidation::validate_bolt12_offer("").is_err());
-        assert!(LnValidation::validate_bolt12_offer("lnbc").is_err()); // Not BOLT-12
-        assert!(LnValidation::validate_bolt12_offer("lno").is_err()); // Too short
+        assert!(LnValidation::check_bolt12_offer("").is_err());
+        assert!(LnValidation::check_bolt12_offer("lnbc").is_err()); // Not BOLT-12
+        assert!(LnValidation::check_bolt12_offer("lno").is_err()); // Too short
     }
 
     #[test]
-    fn test_validate_payment_hash() {
+    fn test_check_payment_hash() {
         // Valid payment hash (64 hex chars)
         let valid_hash = "a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890";
-        assert!(LnValidation::validate_payment_hash(valid_hash).is_ok());
+        assert!(LnValidation::check_payment_hash(valid_hash).is_ok());
 
         // Invalid payment hashes
-        assert!(LnValidation::validate_payment_hash("").is_err());
-        assert!(LnValidation::validate_payment_hash("short").is_err());
-        assert!(LnValidation::validate_payment_hash("invalidhex!@#$").is_err());
+        assert!(LnValidation::check_payment_hash("").is_err());
+        assert!(LnValidation::check_payment_hash("short").is_err());
+        assert!(LnValidation::check_payment_hash("invalidhex!@#$").is_err());
         let too_long = "a".repeat(65);
-        assert!(LnValidation::validate_payment_hash(&too_long).is_err());
+        assert!(LnValidation::check_payment_hash(&too_long).is_err());
     }
 
     #[test]
-    fn test_validate_webhook_url() {
+    fn test_check_webhook_url() {
         // Valid webhook URLs
-        assert!(LnValidation::validate_webhook_url(&None).is_ok());
-        assert!(LnValidation::validate_webhook_url(&Some(
+        assert!(LnValidation::check_webhook_url(&None).is_ok());
+        assert!(LnValidation::check_webhook_url(&Some(
             "https://example.com/webhook".to_string()
         ))
         .is_ok());
-        assert!(LnValidation::validate_webhook_url(&Some(
+        assert!(LnValidation::check_webhook_url(&Some(
             "http://localhost:3000/webhook".to_string()
         ))
         .is_ok());
 
         // Invalid webhook URLs
-        assert!(LnValidation::validate_webhook_url(&Some("".to_string())).is_err());
+        assert!(LnValidation::check_webhook_url(&Some("".to_string())).is_err());
         assert!(
-            LnValidation::validate_webhook_url(&Some("ftp://example.com".to_string())).is_err()
+            LnValidation::check_webhook_url(&Some("ftp://example.com".to_string())).is_err()
         );
         assert!(
-            LnValidation::validate_webhook_url(&Some("https://\0example.com".to_string())).is_err()
+            LnValidation::check_webhook_url(&Some("https://\0example.com".to_string())).is_err()
         );
     }
 }

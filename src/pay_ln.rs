@@ -187,7 +187,7 @@ impl Phoenixd {
 
         let url = self
             .api_url
-            .join(&format!("payments/outgoing/{}", payment_hash))
+            .join(&format!("payments/outgoingbyhash/{}", payment_hash))
             .map_err(|_| Error::InvalidUrl)?;
 
         let res = match self.make_get(url).await {

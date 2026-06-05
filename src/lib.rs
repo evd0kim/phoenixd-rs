@@ -12,11 +12,13 @@ use serde_json::Value;
 
 mod error;
 pub mod invoice;
+pub mod lightning;
 pub mod pay_ln;
 pub mod webhooks;
 
 pub use error::Error;
 pub use invoice::*;
+pub use lightning::*;
 pub use pay_ln::*;
 
 /// Phoenixd

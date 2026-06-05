@@ -1,6 +1,6 @@
 //! Pay Ln
 
-use anyhow::bail;
+use anyhow::{bail, Result};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
@@ -53,7 +53,7 @@ pub struct GetOutgoingInvoiceResponse {
     /// Payment Hash
     pub payment_hash: String,
     /// Preimage
-    pub preimage: String,
+    pub preimage: Option<String>,
     /// Paid flag
     pub is_paid: bool,
     /// Amount sent
@@ -66,6 +66,19 @@ pub struct GetOutgoingInvoiceResponse {
     pub completed_at: Option<u64>,
     /// Time created
     pub created_at: u64,
+}
+
+/// Pay a Lightning Address.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayLnAddressRequest {
+    /// Amount in sats.
+    pub amount_sat: u64,
+    /// Lightning address.
+    pub address: String,
+    /// Optional payer message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
 }
 
 impl Phoenixd {
@@ -121,6 +134,14 @@ impl Phoenixd {
         }
     }
 
+    /// Pay a Lightning Address.
+    pub async fn pay_ln_address(&self, request: PayLnAddressRequest) -> Result<PayInvoiceResponse> {
+        let url = self.api_url.join("/paylnaddress")?;
+        Ok(serde_json::from_value(
+            self.make_post(url, Some(request)).await?,
+        )?)
+    }
+
     /// Find outgoing invoice
     pub async fn get_outgoing_invoice(
         &self,
@@ -128,20 +149,23 @@ impl Phoenixd {
     ) -> Result<GetOutgoingInvoiceResponse, Error> {
         let url = self
             .api_url
-            .join(&format!("payments/outgoing/{}", payment_hash))
+            .join(&format!("payments/outgoingbyhash/{}", payment_hash))
             .map_err(|_| Error::InvalidUrl)?;
 
-        let res = match self.make_get(url).await {
-            Ok(res) => res,
-            Err(err) => {
-                if let Error::ReqwestError(err) = &err {
-                    if err.status().unwrap_or_default() == StatusCode::NOT_FOUND {
-                        return Err(Error::NotFound);
-                    }
-                }
-                return Err(err);
-            }
-        };
+        let response = self
+            .client
+            .get(url)
+            .basic_auth("", Some(&self.api_password))
+            .send()
+            .await?;
+
+        if response.status() == StatusCode::NO_CONTENT || response.status() == StatusCode::NOT_FOUND
+        {
+            return Err(Error::NotFound);
+        }
+
+        let response = response.error_for_status()?;
+        let res: serde_json::Value = response.json().await?;
 
         match serde_json::from_value(res.clone()) {
             Ok(res) => Ok(res),

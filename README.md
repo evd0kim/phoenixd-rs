@@ -5,12 +5,28 @@
 
 ### Receive
 - [x] Create invoice
+- [x] Create offer
+- [x] Get offer
+- [x] Get LN address
 - [x] Get Invoice
 - [x] Get Incoming Invoice
+- [x] List incoming payments
 
 ### Pay
 - [x] Get LN payment quote
 - [x] Execute LN Payment Quote
+- [x] Pay LN address
+- [x] List outgoing payments
+- [x] Get outgoing payment by hash
+- [x] Get outgoing payment by UUID
+
+### Node
+- [x] Get node info
+- [x] Get balance
+- [x] Estimate liquidity fees
+- [x] List channels
+- [x] Decode invoice
+- [x] Decode offer
 
 ### Webhook
 

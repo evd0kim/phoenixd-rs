@@ -5,7 +5,6 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::pay_ln::PayInvoiceResponse;
 use crate::Phoenixd;
 
 /// Channel details from `getinfo`.
@@ -185,19 +184,6 @@ pub struct CreateOfferRequest {
     pub description: Option<String>,
 }
 
-/// Pay a Lightning Address.
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PayLnAddressRequest {
-    /// Amount in sats.
-    pub amount_sat: u64,
-    /// Lightning address.
-    pub address: String,
-    /// Optional payer message.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub message: Option<String>,
-}
-
 impl Phoenixd {
     /// Fetch node info.
     pub async fn get_node_info(&self) -> Result<GetNodeInfoResponse> {
@@ -352,38 +338,6 @@ impl Phoenixd {
 
         let response = response.error_for_status()?;
         Ok(Some(serde_json::from_value(response.json().await?)?))
-    }
-
-    /// Get an outgoing payment by payment hash.
-    pub async fn get_outgoing_payment_by_hash(
-        &self,
-        payment_hash: &str,
-    ) -> Result<Option<OutgoingPaymentResponse>> {
-        let url = self
-            .api_url
-            .join(&format!("/payments/outgoingbyhash/{}", payment_hash))?;
-
-        let response = self
-            .client
-            .get(url)
-            .basic_auth("", Some(&self.api_password))
-            .send()
-            .await?;
-
-        if response.status() == StatusCode::NO_CONTENT {
-            return Ok(None);
-        }
-
-        let response = response.error_for_status()?;
-        Ok(Some(serde_json::from_value(response.json().await?)?))
-    }
-
-    /// Pay a Lightning Address.
-    pub async fn pay_ln_address(&self, request: PayLnAddressRequest) -> Result<PayInvoiceResponse> {
-        let url = self.api_url.join("/paylnaddress")?;
-        Ok(serde_json::from_value(
-            self.make_post(url, Some(request)).await?,
-        )?)
     }
 
     /// Decode a bolt11 invoice.

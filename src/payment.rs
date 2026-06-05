@@ -1,6 +1,6 @@
 //! Pay Ln
 
-use anyhow::bail;
+use anyhow::{bail, Result};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
@@ -68,6 +68,19 @@ pub struct GetOutgoingInvoiceResponse {
     pub created_at: u64,
 }
 
+/// Pay a Lightning Address.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PayLnAddressRequest {
+    /// Amount in sats.
+    pub amount_sat: u64,
+    /// Lightning address.
+    pub address: String,
+    /// Optional payer message.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
+
 impl Phoenixd {
     /// PayInvoice
     pub async fn pay_bolt11_invoice(
@@ -119,6 +132,14 @@ impl Phoenixd {
                 bail!("Could not execute payment quote")
             }
         }
+    }
+
+    /// Pay a Lightning Address.
+    pub async fn payment_address(&self, request: PayLnAddressRequest) -> Result<PayInvoiceResponse> {
+        let url = self.api_url.join("/paylnaddress")?;
+        Ok(serde_json::from_value(
+            self.make_post(url, Some(request)).await?,
+        )?)
     }
 
     /// Find outgoing invoice

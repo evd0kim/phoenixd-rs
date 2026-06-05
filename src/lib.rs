@@ -5,6 +5,7 @@
 #![warn(rustdoc::bare_urls)]
 
 use std::str::FromStr;
+use std::time::Duration;
 
 use reqwest::{Client, IntoUrl, Url};
 use serde::{Deserialize, Serialize};

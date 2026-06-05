@@ -4,7 +4,7 @@ use anyhow::{bail, Result};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 
-use crate::{Error, Phoenixd};
+use crate::Phoenixd;
 
 /// Pay Invoice Request
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -46,28 +46,6 @@ pub struct PayInvoiceResponse {
     pub payment_preimage: String,
 }
 
-/// Find Outgoing Response
-#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GetOutgoingInvoiceResponse {
-    /// Payment Hash
-    pub payment_hash: String,
-    /// Preimage
-    pub preimage: Option<String>,
-    /// Paid flag
-    pub is_paid: bool,
-    /// Amount sent
-    pub sent: u64,
-    /// Fees
-    pub fees: u64,
-    /// Invoice
-    pub invoice: Option<String>,
-    /// Completed at
-    pub completed_at: Option<u64>,
-    /// Time created
-    pub created_at: u64,
-}
-
 /// Pay a Lightning Address.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -79,6 +57,56 @@ pub struct PayLnAddressRequest {
     /// Optional payer message.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+}
+
+
+/// Outgoing payment shape returned by phoenixd.
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OutgoingPaymentResponse {
+    /// Payment subtype.
+    pub sub_type: String,
+    /// Payment id (uuid).
+    pub payment_id: String,
+    /// Payment hash for lightning payments.
+    pub payment_hash: Option<String>,
+    /// Preimage for successful lightning payments.
+    pub preimage: Option<String>,
+    /// On-chain tx id for on-chain payments.
+    pub tx_id: Option<String>,
+    /// Paid flag.
+    pub is_paid: bool,
+    /// Sent amount in sats.
+    pub sent: u64,
+    /// Fees in millisats.
+    pub fees: u64,
+    /// Optional invoice.
+    pub invoice: Option<String>,
+    /// Completion timestamp (ms).
+    pub completed_at: Option<u64>,
+    /// Creation timestamp (ms).
+    pub created_at: u64,
+}
+
+/// Optional filters for list outgoing payments.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ListOutgoingPaymentsRequest {
+    /// From timestamp (ms).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub from: Option<u64>,
+    /// To timestamp (ms).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub to: Option<u64>,
+    /// Max number of items.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u64>,
+    /// Offset.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub offset: Option<u64>,
+    /// Include all.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all: Option<bool>,
 }
 
 impl Phoenixd {
@@ -142,15 +170,14 @@ impl Phoenixd {
         )?)
     }
 
-    /// Find outgoing invoice
-    pub async fn get_outgoing_invoice(
+    /// Get an outgoing payment by payment hash.
+    pub async fn get_outgoing_payment_by_hash(
         &self,
         payment_hash: &str,
-    ) -> Result<GetOutgoingInvoiceResponse, Error> {
+    ) -> Result<Option<OutgoingPaymentResponse>> {
         let url = self
             .api_url
-            .join(&format!("payments/outgoingbyhash/{}", payment_hash))
-            .map_err(|_| Error::InvalidUrl)?;
+            .join(&format!("/payments/outgoingbyhash/{}", payment_hash))?;
 
         let response = self
             .client
@@ -159,22 +186,64 @@ impl Phoenixd {
             .send()
             .await?;
 
-        if response.status() == StatusCode::NO_CONTENT || response.status() == StatusCode::NOT_FOUND
-        {
-            return Err(Error::NotFound);
+        if response.status() == StatusCode::NO_CONTENT {
+            return Ok(None);
         }
 
         let response = response.error_for_status()?;
-        let res: serde_json::Value = response.json().await?;
+        Ok(Some(serde_json::from_value(response.json().await?)?))
+    }
 
-        match serde_json::from_value(res.clone()) {
-            Ok(res) => Ok(res),
-            Err(err) => {
-                log::error!("Api error response getting payment quote");
-                log::error!("{}", res);
 
-                Err(err.into())
+    /// List outgoing payments.
+    pub async fn list_outgoing_payments(
+        &self,
+        request: ListOutgoingPaymentsRequest,
+    ) -> Result<Vec<OutgoingPaymentResponse>> {
+        let mut url = self.api_url.join("/payments/outgoing")?;
+        {
+            let mut query = url.query_pairs_mut();
+            if let Some(from) = request.from {
+                query.append_pair("from", &from.to_string());
+            }
+            if let Some(to) = request.to {
+                query.append_pair("to", &to.to_string());
+            }
+            if let Some(limit) = request.limit {
+                query.append_pair("limit", &limit.to_string());
+            }
+            if let Some(offset) = request.offset {
+                query.append_pair("offset", &offset.to_string());
+            }
+            if let Some(all) = request.all {
+                query.append_pair("all", &all.to_string());
             }
         }
+
+        Ok(serde_json::from_value(self.make_get(url).await?)?)
+    }
+
+    /// Get an outgoing payment by UUID.
+    pub async fn get_outgoing_payment_by_uuid(
+        &self,
+        payment_id: &str,
+    ) -> Result<Option<OutgoingPaymentResponse>> {
+        let url = self
+            .api_url
+            .join(&format!("/payments/outgoing/{}", payment_id))?;
+
+        let response = self
+            .client
+            .get(url)
+            .basic_auth("", Some(&self.api_password))
+            .send()
+            .await?;
+
+        if response.status() == StatusCode::NO_CONTENT {
+            return Ok(None);
+        }
+
+        let response = response.error_for_status()?;
+        Ok(Some(serde_json::from_value(response.json().await?)?))
     }
 }

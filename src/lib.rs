@@ -55,7 +55,11 @@ impl Phoenixd {
     /// let client = Phoenixd::new("xxxxxxxxxxx", "https://test.com").unwrap();
     /// ```
     pub fn new(api_password: &str, api_url: &str) -> anyhow::Result<Self> {
-        let client = reqwest::Client::builder().build()?;
+        let client = reqwest::Client::builder()
+            .connect_timeout(Duration::from_secs(10))
+            .timeout(Duration::from_secs(20))
+            .build()?;
+
         let api_url = Url::from_str(api_url)?;
 
         Ok(Self {

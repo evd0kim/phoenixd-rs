@@ -5,7 +5,8 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::{pay_ln::PayInvoiceResponse, Phoenixd};
+use crate::pay_ln::PayInvoiceResponse;
+use crate::Phoenixd;
 
 /// Channel details from `getinfo`.
 #[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
@@ -378,12 +379,11 @@ impl Phoenixd {
     }
 
     /// Pay a Lightning Address.
-    pub async fn pay_ln_address(
-        &self,
-        request: PayLnAddressRequest,
-    ) -> Result<PayInvoiceResponse> {
+    pub async fn pay_ln_address(&self, request: PayLnAddressRequest) -> Result<PayInvoiceResponse> {
         let url = self.api_url.join("/paylnaddress")?;
-        Ok(serde_json::from_value(self.make_post(url, Some(request)).await?)?)
+        Ok(serde_json::from_value(
+            self.make_post(url, Some(request)).await?,
+        )?)
     }
 
     /// Decode a bolt11 invoice.

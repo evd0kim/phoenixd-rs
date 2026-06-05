@@ -142,14 +142,6 @@ impl Phoenixd {
         )?)
     }
 
-    /// Pay a Lightning Address.
-    pub async fn payment_address(
-        &self,
-        request: PayLnAddressRequest,
-    ) -> Result<PayInvoiceResponse> {
-        self.pay_ln_address(request).await
-    }
-
     /// Find outgoing invoice
     pub async fn get_outgoing_invoice(
         &self,

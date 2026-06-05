@@ -53,7 +53,7 @@ pub struct GetOutgoingInvoiceResponse {
     /// Payment Hash
     pub payment_hash: String,
     /// Preimage
-    pub preimage: String,
+    pub preimage: Option<String>,
     /// Paid flag
     pub is_paid: bool,
     /// Amount sent
@@ -135,11 +135,19 @@ impl Phoenixd {
     }
 
     /// Pay a Lightning Address.
-    pub async fn payment_address(&self, request: PayLnAddressRequest) -> Result<PayInvoiceResponse> {
+    pub async fn pay_ln_address(&self, request: PayLnAddressRequest) -> Result<PayInvoiceResponse> {
         let url = self.api_url.join("/paylnaddress")?;
         Ok(serde_json::from_value(
             self.make_post(url, Some(request)).await?,
         )?)
+    }
+
+    /// Pay a Lightning Address.
+    pub async fn payment_address(
+        &self,
+        request: PayLnAddressRequest,
+    ) -> Result<PayInvoiceResponse> {
+        self.pay_ln_address(request).await
     }
 
     /// Find outgoing invoice
@@ -152,17 +160,20 @@ impl Phoenixd {
             .join(&format!("payments/outgoingbyhash/{}", payment_hash))
             .map_err(|_| Error::InvalidUrl)?;
 
-        let res = match self.make_get(url).await {
-            Ok(res) => res,
-            Err(err) => {
-                if let Error::ReqwestError(err) = &err {
-                    if err.status().unwrap_or_default() == StatusCode::NOT_FOUND {
-                        return Err(Error::NotFound);
-                    }
-                }
-                return Err(err);
-            }
-        };
+        let response = self
+            .client
+            .get(url)
+            .basic_auth("", Some(&self.api_password))
+            .send()
+            .await?;
+
+        if response.status() == StatusCode::NO_CONTENT || response.status() == StatusCode::NOT_FOUND
+        {
+            return Err(Error::NotFound);
+        }
+
+        let response = response.error_for_status()?;
+        let res: serde_json::Value = response.json().await?;
 
         match serde_json::from_value(res.clone()) {
             Ok(res) => Ok(res),

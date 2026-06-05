@@ -340,6 +340,30 @@ impl Phoenixd {
         Ok(Some(serde_json::from_value(response.json().await?)?))
     }
 
+    /// Get an outgoing payment by payment hash.
+    pub async fn get_outgoing_payment_by_hash(
+        &self,
+        payment_hash: &str,
+    ) -> Result<Option<OutgoingPaymentResponse>> {
+        let url = self
+            .api_url
+            .join(&format!("/payments/outgoingbyhash/{}", payment_hash))?;
+
+        let response = self
+            .client
+            .get(url)
+            .basic_auth("", Some(&self.api_password))
+            .send()
+            .await?;
+
+        if response.status() == StatusCode::NO_CONTENT {
+            return Ok(None);
+        }
+
+        let response = response.error_for_status()?;
+        Ok(Some(serde_json::from_value(response.json().await?)?))
+    }
+
     /// Decode a bolt11 invoice.
     pub async fn decode_invoice(&self, invoice: &str) -> Result<Value> {
         let url = self.api_url.join("/decodeinvoice")?;

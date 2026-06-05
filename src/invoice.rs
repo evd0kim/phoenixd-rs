@@ -48,9 +48,9 @@ pub struct GetIncomingInvoiceResponse {
     /// External Id
     pub external_id: Option<String>,
     /// Description
-    pub description: String,
+    pub description: Option<String>,
     /// Bolt11 invoice
-    pub invoice: String,
+    pub invoice: Option<String>,
     /// Paid flag
     pub is_paid: bool,
     /// Sats received
